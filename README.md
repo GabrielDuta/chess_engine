@@ -1,1 +1,1 @@
-Bitboard Chess Engine in C
+Bitboard Chess Engine in C.
