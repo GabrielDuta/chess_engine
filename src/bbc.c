@@ -1,7 +1,6 @@
 
 // System headers
-#include <stdio.h> // print to console
-
+#include <stdio.h>
 
 // define bitboard data type
 // used to represent board
@@ -19,6 +18,9 @@ enum {
   a1, b1, c1, d1, e1, f1, g1, h1,
 };
 
+// sides to move (colors)
+enum {White, Black};
+
 /*
 "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8,"
 "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7,"
@@ -34,9 +36,9 @@ enum {
 //
 // macro to see if bitboard has piece in a certain square
 #define get_bit(bitboard, square) (bitboard & (1ULL << square))
-// set a bit
+// set a bit in bitboard
 #define set_bit(bitboard, square) (bitboard |= (1ULL << square))
-// pop a bit
+// pop a bit from bitboard
 #define pop_bit(bitboard, square) (get_bit(bitboard, square) ? bitboard ^= (1ULL << square) : 0)
 
 
@@ -58,7 +60,7 @@ void print_bitboard(U64 bitboard) {
         printf("  %d ", 8 - rank);
 
       // print bit state (1 -> piece, 0 -> no piece)
-      printf(" %d", get_bit(bitboard, square) ? 1 : 0);
+      printf(" %c", get_bit(bitboard, square) ? '1' : '.');
     }
     printf("\n");
   }
@@ -70,18 +72,103 @@ void print_bitboard(U64 bitboard) {
   printf("     Bitboard: %llud\n\n", bitboard);
 }
 
+/*
+* ATTACKS
+*/
+// not A file constant -> checks that the pawn is not on the A file
+// bitboard initializet to 1, except for the A file
+const U64 not_a_file = 18374403900871474942ULL;
+
+// not H file constant -> checks that the pawn is not on the H file
+// bitboard initializet to 1, except for the H file
+const U64 not_h_file = 9187201950435737471ULL;
+
+// not HG files constant -> used for horses
+const U64 not_hg_files = 4557430888798830399ULL;
+
+// not AB files constant -> used for horses
+const U64 not_ab_files = 18229723555195321596ULL;
+
+// pawn attack table: [side (b/w)][square]
+U64 pawn_atttacks[2][64];
+// knight attack table: [square] (b/w have same table)
+U64 knight_attacks[64];
+
+// generate pawn attacks
+U64 mask_pawn_attacks(int side, int square) {
+  // piece bitboard
+  U64 bitboard = 0ULL;
+  //resulting attacks bitboard
+  U64 attacks = 0ULL;
+
+  // set piece on board
+  set_bit(bitboard, square);
+
+  if(!side) {
+    // wite pawns
+    // checks that a capture is possible and sets it
+    attacks |= (bitboard >> 7) & not_a_file;
+    attacks |= (bitboard >> 9) & not_h_file;
+  }
+  else {
+    // black pawns
+    attacks |= (bitboard << 7) & not_h_file;
+    attacks |= (bitboard << 9) & not_a_file;
+  }
+
+  // return attack map
+  return attacks;
+}
+
+// generate knight attacks
+U64 mask_knight_attacks(int square) {
+  // piece bitboard
+  U64 bitboard = 0ULL;
+  //resulting attacks bitboard
+  U64 attacks = 0ULL;
+
+  // set piece on board
+  set_bit(bitboard, square);
+
+  // not using ifs beacause at low level are more expensive
+  attacks |= ((bitboard >> 17) & not_h_file);
+  attacks |= ((bitboard >> 15) & not_a_file);
+  attacks |= ((bitboard >> 10) & not_hg_files);
+  attacks |= ((bitboard >> 6) & not_ab_files);
+
+  attacks |= ((bitboard << 17) & not_a_file);
+  attacks |= ((bitboard << 15) & not_h_file);
+  attacks |= ((bitboard << 10) & not_ab_files);
+  attacks |= ((bitboard << 6) & not_hg_files);
+
+  return attacks;
+}
+
+// init leaper pieces attacks
+void init_leapers_attacks() {
+  int square;
+
+  // loop over board squares
+  for(square = 0; square < 64; square++) {
+    //init pawn attacks
+    pawn_atttacks[White][square] = mask_pawn_attacks(White, square);
+    pawn_atttacks[Black][square] = mask_pawn_attacks(Black, square);
+
+    // init knight attacks
+    knight_attacks[square] = mask_knight_attacks(square);
+  }
+}
+
 int main() {
   U64 bitboard = 0ULL; // define bitboard
+  
+  // init leaper pieces attacks
+  init_leapers_attacks();
 
-  set_bit(bitboard, e4);
-  set_bit(bitboard, a1);
-  set_bit(bitboard, f4);
-
-  print_bitboard(bitboard);
-
-  pop_bit(bitboard, e4);
-
-  print_bitboard(bitboard);
+  for(int square = 0; square < 64; square++) { 
+    //print_bitboard(pawn_atttacks[White][square]);
+    print_bitboard(knight_attacks[square]);
+  }
 
   return 0;
 }
