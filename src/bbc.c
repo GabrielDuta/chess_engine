@@ -93,6 +93,8 @@ const U64 not_ab_files = 18229723555195321596ULL;
 U64 pawn_atttacks[2][64];
 // knight attack table: [square] (b/w have same table)
 U64 knight_attacks[64];
+// king attack table: [square] (b/w have same table)
+U64 king_attacks[64];
 
 // generate pawn attacks
 U64 mask_pawn_attacks(int side, int square) {
@@ -107,13 +109,13 @@ U64 mask_pawn_attacks(int side, int square) {
   if(!side) {
     // wite pawns
     // checks that a capture is possible and sets it
-    attacks |= (bitboard >> 7) & not_a_file;
-    attacks |= (bitboard >> 9) & not_h_file;
+    attacks |= ((bitboard >> 7) & not_a_file);
+    attacks |= ((bitboard >> 9) & not_h_file);
   }
   else {
     // black pawns
-    attacks |= (bitboard << 7) & not_h_file;
-    attacks |= (bitboard << 9) & not_a_file;
+    attacks |= ((bitboard << 7) & not_h_file);
+    attacks |= ((bitboard << 9) & not_a_file);
   }
 
   // return attack map
@@ -144,6 +146,84 @@ U64 mask_knight_attacks(int square) {
   return attacks;
 }
 
+// generate king attacks
+U64 mask_king_attacks(int square) {
+  // piece bitboard
+  U64 bitboard = 0ULL;
+  //resulting attacks bitboard
+  U64 attacks = 0ULL;
+
+  // set piece on board
+  set_bit(bitboard, square);
+
+  attacks |= ((bitboard >> 7)) & not_a_file;
+  attacks |= ((bitboard >> 8));
+  attacks |= ((bitboard >> 9)) & not_h_file;
+
+  attacks |= ((bitboard >> 1)) & not_h_file;
+  attacks |= ((bitboard << 1)) & not_a_file;
+
+  attacks |= ((bitboard << 7)) & not_h_file;
+  attacks |= ((bitboard << 8));
+  attacks |= ((bitboard << 9)) & not_a_file;
+
+  return attacks;
+}
+
+// mask bishop attacks
+U64 mask_bishop_attacks(int square) {
+  // result attacks bitboard
+  U64 attacks = 0ULL;
+
+  // init ranks & files
+  int r, f;
+  // init target ranks & files
+  int target_r = square / 8;
+  int target_f = square % 8;
+
+  // mask relevant bishop occupancy bits, not initialize edges
+  for(r = target_r + 1, f = target_f + 1; r < 7 && f < 7; r++, f++)
+    attacks |= (1ULL << (r * 8 + f));
+
+  for(r = target_r + 1, f = target_f - 1; r < 7 && f > 0; r++, f--)
+    attacks |= (1ULL << (r * 8 + f));
+
+  for(r = target_r - 1, f = target_f + 1; r > 0 && f < 7; r--, f++)
+    attacks |= (1ULL << (r * 8 + f));
+    
+  for(r = target_r - 1, f = target_f - 1; r > 0 && f > 0; r--, f--)
+    attacks |= (1ULL << (r * 8 + f));
+
+  return attacks;
+}
+
+// mask rook attacks
+U64 mask_rook_attacks(int square) {
+  // result attacks bitboard
+  U64 attacks = 0ULL;
+
+  // init ranks & files
+  int r, f;
+  // init target ranks & files
+  int target_r = square / 8;
+  int target_f = square % 8;
+
+  // mask relevant rook occupancy bits, not initialize edges
+  for(r = target_r + 1, f = target_f; r < 7; r++)
+    attacks |= (1ULL << (r * 8 + f));
+
+  for(r = target_r - 1, f = target_f; r > 0; r--)
+    attacks |= (1ULL << (r * 8 + f));
+
+  for(r = target_r, f = target_f + 1; f < 7; f++)
+    attacks |= (1ULL << (r * 8 + f));
+    
+  for(r = target_r, f = target_f - 1; f > 0; f--)
+    attacks |= (1ULL << (r * 8 + f));
+
+  return attacks;
+}
+
 // init leaper pieces attacks
 void init_leapers_attacks() {
   int square;
@@ -156,6 +236,9 @@ void init_leapers_attacks() {
 
     // init knight attacks
     knight_attacks[square] = mask_knight_attacks(square);
+
+    // init king attacks
+    king_attacks[square] = mask_king_attacks(square);
   }
 }
 
@@ -167,8 +250,9 @@ int main() {
 
   for(int square = 0; square < 64; square++) { 
     //print_bitboard(pawn_atttacks[White][square]);
-    print_bitboard(knight_attacks[square]);
+    print_bitboard(mask_rook_attacks(square));
   }
+
 
   return 0;
 }
